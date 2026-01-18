@@ -5,7 +5,7 @@ from PIL import Image
 import datetime
 import os
 
-# ตั้งค่าธีมและสีมงคล (ทอง-เขียว)
+# ตั้งค่าธีมและสีมงคล
 st.set_page_config(page_title="Xforce Ultimate Tracker", layout="wide")
 
 LOG_FILE = 'drive_log.csv'   
@@ -20,12 +20,11 @@ def load_data(file_path, columns):
 def save_data(df, file_path):
     df.to_csv(file_path, index=False)
 
-st.title(" Mitsubishi Xforce : Tracker")
-st.write(f"สวัสดีวัน{datetime.datetime.now().strftime('%A')} | บันทึกข้อมูลเพื่อความเฮงและความประหยัดครับ")
+st.title("Xforce Tracker")
 
 tab1, tab2 = st.tabs(["📊 สถิติหน้าจอ (km/L)", "⛽ บันทึกเติมน้ำมัน & ระยะทาง"])
 
-# --- หน้าที่ 1: บันทึกจาก Dashboard (เหมือนเดิม) ---
+# --- หน้าที่ 1: บันทึกจาก Dashboard ---
 with tab1:
     st.subheader("บันทึกจากหน้าจอ Dashboard")
     with st.expander("📸 อัปโหลดรูปและกรอกข้อมูล"):
@@ -47,62 +46,59 @@ with tab1:
     if not df_log.empty:
         st.data_editor(df_log, num_rows="dynamic", use_container_width=True, key="ed1")
 
-# --- หน้าที่ 2: บันทึกเติมน้ำมัน & ระยะทางที่วิ่งได้ ---
+# --- หน้าที่ 2: บันทึกเติมน้ำมัน (เพิ่มชนิดน้ำมัน) ---
 with tab2:
-    st.subheader("บันทึกการเติมน้ำมันและระยะทางต่อถัง")
+    st.subheader("บันทึกการเติมน้ำมัน")
     
-    # ดึงเลขไมล์ล่าสุดมาโชว์เพื่อช่วยคำนวณ
-    df_f_old = load_data(FUEL_FILE, ['Date', 'Price_Per_Liter', 'Liters', 'Total_Cost', 'Odometer', 'Trip_Dist'])
+    df_f_old = load_data(FUEL_FILE, ['Date', 'Fuel_Type', 'Price_Per_Liter', 'Liters', 'Total_Cost', 'Odometer', 'Trip_Dist'])
     last_odo = 0
     if not df_f_old.empty:
         last_odo = df_f_old['Odometer'].max()
-        st.info(f"📍 เลขไมล์ที่บันทึกไว้ครั้งล่าสุดคือ: {last_odo:,} km")
+        st.info(f"📍 เลขไมล์ล่าสุดที่บันทึกไว้: {last_odo:,} km")
 
     with st.expander("⛽ กรอกข้อมูลการเติมน้ำมัน", expanded=True):
         f1, f2 = st.columns(2)
         with f1:
             f_date = st.date_input("วันที่เติม", datetime.date.today(), key="f_date")
+            # --- เพิ่มส่วนเลือกชนิดน้ำมัน ---
+            f_type = st.selectbox("ชนิดน้ำมันที่เติม", 
+                                ["Gasohol 95", "Gasohol 91", "E20", "Premium 95", "อื่น ๆ"])
             f_price = st.number_input("ราคาน้ำมัน (บาท/ลิตร)", value=0.0, step=0.1)
             f_liters = st.number_input("จำนวนลิตรที่เติม", value=0.0, step=0.1)
         with f2:
             f_odo = st.number_input("เลขไมล์ขณะเติม (km)", value=int(last_odo), step=1)
-            # คำนวณระยะทางที่วิ่งได้จากถังก่อนหน้า
             trip_dist = f_odo - last_odo if last_odo > 0 else 0
-            st.write(f"🛣️ ระยะทางที่วิ่งได้จากถังก่อนหน้า: **{trip_dist:,} km**")
+            st.write(f"🛣️ ระยะทางที่วิ่งได้จากถังก่อน: **{trip_dist:,} km**")
             
             f_total = f_price * f_liters
             st.write(f"💰 ยอดรวม: **{f_total:,.2f} บาท**")
 
         if st.button("⛽ บันทึกการเติมน้ำมัน"):
-            df = load_data(FUEL_FILE, ['Date', 'Price_Per_Liter', 'Liters', 'Total_Cost', 'Odometer', 'Trip_Dist'])
+            df = load_data(FUEL_FILE, ['Date', 'Fuel_Type', 'Price_Per_Liter', 'Liters', 'Total_Cost', 'Odometer', 'Trip_Dist'])
             new = pd.DataFrame({
                 'Date':[str(f_date)], 
+                'Fuel_Type':[f_type], # บันทึกชนิดน้ำมันลงไปด้วย
                 'Price_Per_Liter':[f_price], 
                 'Liters':[f_liters], 
                 'Total_Cost':[f_total],
                 'Odometer':[f_odo],
-                'Trip_Dist':[trip_dist] # บันทึกระยะทางที่วิ่งได้จริง
+                'Trip_Dist':[trip_dist]
             })
             save_data(pd.concat([df, new], ignore_index=True), FUEL_FILE)
-            st.success("บันทึกสำเร็จ!")
+            st.success(f"บันทึก {f_type} เรียบร้อย! ขอให้เดินทางราบรื่นครับ")
             st.rerun()
 
     # ตารางสรุปผล
-    df_fuel = load_data(FUEL_FILE, ['Date', 'Price_Per_Liter', 'Liters', 'Total_Cost', 'Odometer', 'Trip_Dist'])
+    df_fuel = load_data(FUEL_FILE, ['Date', 'Fuel_Type', 'Price_Per_Liter', 'Liters', 'Total_Cost', 'Odometer', 'Trip_Dist'])
     if not df_fuel.empty:
-        # ส่วนวิเคราะห์ข้อมูล
         st.divider()
-        m1, m2, m3 = st.columns(3)
-        total_pay = df_fuel['Total_Cost'].sum()
-        total_km = df_fuel['Trip_Dist'].sum()
-        avg_cost_km = total_pay / total_km if total_km > 0 else 0
-        
-        m1.metric("จ่ายรวม", f"{total_pay:,.2f} ฿")
-        m2.metric("ระยะทางรวม", f"{total_km:,} km")
-        m3.metric("เฉลี่ยต่อกิโลเมตร", f"{avg_cost_km:.2f} ฿/km")
-
-        st.write("📋 ประวัติการเติมน้ำมัน")
+        st.write("📋 ประวัติการเติมน้ำมัน (ชนิดน้ำมัน/ยอดเงิน/ระยะทาง)")
         edit_fuel = st.data_editor(df_fuel, num_rows="dynamic", use_container_width=True, key="ed2")
         if st.button("✅ ยืนยันการแก้ไข"):
             save_data(edit_fuel, FUEL_FILE)
             st.rerun()
+            
+        # กราฟแยกตามชนิดน้ำมัน
+        st.write("📊 สรุปสัดส่วนชนิดน้ำมันที่เติม")
+        fig_pie = px.pie(df_fuel, names='Fuel_Type', values='Liters', color_discrete_sequence=px.colors.sequential.Greens_r)
+        st.plotly_chart(fig_pie, use_container_width=True)
