@@ -20,10 +20,8 @@ def save_data(df):
     df.to_csv(DATA_FILE, index=False)
 
 # ส่วนหัว: รูปรถสีทองมงคล
-st.title("🚗 Mitsubishi Xforce Ultimate (Gold Edition)")
-st.image("https://www.mitsubishi-motors.co.th/content/dam/mitsubishi-motors-th/images/cars/xforce/2024/exterior/xforce-exterior-1.jpg", caption="รถสีเหลืองทองนำโชค เสริมดวงคนเกิดวันพุธกลางวัน", use_container_width=True)
-
-st.write(f"📅 วันนี้วัน{datetime.datetime.now().strftime('%A')} | ฤกษ์ดีสำหรับการบันทึกพลังงาน")
+st.title("Mitsubishi Xforce Ultimate X")
+st.write(f"📅 วันนี้วัน{datetime.datetime.now().strftime('%A')} | Victor ")
 
 # --- ส่วนที่ 1: อัปโหลดรูปเพื่อดูและกรอก ---
 with st.expander("📸 บันทึกข้อมูลใหม่ (อัปโหลดรูปหน้าจอ)", expanded=True):
