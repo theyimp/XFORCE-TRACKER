@@ -49,10 +49,10 @@ COLS_CONS = ["Date", "Consumption", "Odometer", "Mode", "Route"]
 COLS_REFILL = ["Date", "Station", "FuelType", "PricePerLiter", "Liters", "TotalPrice", "Odometer"]
 
 # --- Header ---
-st.title("🚗 XFORCE ULTIMATE - GRAY EDITION V4")
-st.write(f"📅 พุธกลางวันมงคล | 🟢 **ระบบดาวน์โหลดข้อมูลตามช่วงเวลา**")
+st.title(" ♻️ XFORCE : ENERGY TRACKER")
 
-tab1, tab2, tab3 = st.tabs(["📊 บันทึกหน้าจอ (km/L)", "⛽ บันทึกการเติมน้ำมัน", "🛠 แก้ไข & ดาวน์โหลดข้อมูล"])
+
+tab1, tab2, tab3 = st.tabs(["📊 อัตราสิ้นเปลืองพลังงาน (km/L)", "⛽ บันทึกการเติมน้ำมัน", "🛠 แก้ไข & ดาวน์โหลดข้อมูล"])
 
 # --- หน้า 1 & 2: (เหมือนเวอร์ชันเดิมสำหรับการบันทึกข้อมูล) ---
 with tab1:
