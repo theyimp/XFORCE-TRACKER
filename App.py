@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
-import plotly.express as px  # เพิ่ม Library สำหรับกราฟ
+import plotly.express as px
 from datetime import datetime
 
 # --- Configuration ---
@@ -74,7 +74,17 @@ st.markdown("""
         color: white; 
     }
     
-    /* Metrics Card */
+    /* Download Button (สีทอง/เหลือง เพื่อความเด่น) */
+    .stDownloadButton>button {
+        background-color: #F1C40F !important;
+        color: black !important;
+        border: none;
+    }
+    .stDownloadButton>button:hover {
+        background-color: #F39C12 !important;
+    }
+    
+    /* Metrics & Expanders */
     div[data-testid="metric-container"] {
         background-color: #262626;
         padding: 15px;
@@ -82,8 +92,6 @@ st.markdown("""
         border-left: 5px solid #2ECC71;
         color: white;
     }
-    
-    /* Expander */
     div[data-testid="stExpander"] { 
         background-color: #262626; 
         border: 1px solid #444; 
@@ -111,15 +119,14 @@ def load_data(filename, columns):
 # --- Header ---
 st.markdown("# ♻️ XFORCE : ENERGY TRACKER")
 
-# --- Tabs (เพิ่ม Tab 4 สำหรับกราฟ) ---
-tab1, tab2, tab3, tab4 = st.tabs(["📊 อัตราสิ้นเปลือง", "⛽ บันทึกน้ำมัน", "🛠 แก้ไขประวัติ", "📈 สรุปผล & กราฟ"])
+# --- Tabs ---
+tab1, tab2, tab3, tab4 = st.tabs(["📊 อัตราสิ้นเปลือง", "⛽ บันทึกน้ำมัน", "🛠 แก้ไขประวัติ", "📈 สรุปผล & Export"])
 
 # ------------------------------------------------------------------
-# TAB 1: อัตราสิ้นเปลืองพลังงาน
+# TAB 1: อัตราสิ้นเปลือง
 # ------------------------------------------------------------------
 with tab1:
     with st.form("add_cons_form"):
-        # Layout เดิมที่จัดไว้
         c1, c2 = st.columns(2)
         d_date = c1.date_input("วันที่บันทึก", datetime.now())
         d_cons = c2.number_input("อัตราสิ้นเปลืองพลังงาน (km/L)", format="%.1f")
@@ -178,7 +185,6 @@ with tab3:
             
             with st.expander(f"📝 {row['Date']} | {row['Station']} | {float(disp_price):.2f} บาท"):
                 c_e1, c_e2 = st.columns(2)
-                
                 try: val_date = pd.to_datetime(row['Date']).date()
                 except: val_date = datetime.now().date()
                 curr_st = row['Station'] if row['Station'] in ["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"] else "ETC"
@@ -211,7 +217,6 @@ with tab3:
         for i in reversed(range(len(df_cons))):
             row = df_cons.iloc[i]
             with st.expander(f"📝 {row['Date']} | {row['Mode']} | {row.get('Consumption', 0)} km/L"):
-                
                 try: val_c_date = pd.to_datetime(row['Date']).date()
                 except: val_c_date = datetime.now().date()
                 curr_mode = row['Mode'] if row['Mode'] in ["Normal", "Wet", "Gravel", "Mud", "Tarmac"] else "Normal"
@@ -237,20 +242,20 @@ with tab3:
                     st.rerun()
 
 # ------------------------------------------------------------------
-# TAB 4: สรุปผล & กราฟ (ส่วนที่เพิ่มใหม่)
+# TAB 4: สรุปผล & Export
 # ------------------------------------------------------------------
 with tab4:
-    st.markdown("### 📈 บทวิเคราะห์สมรรถนะ (Dashboard)")
+    st.markdown("### 📈 Dashboard & Export")
     
     df_cons = load_data(DB_CONS, COLS_CONS)
+    df_refill = load_data(DB_REFILL, COLS_REFILL)
     
+    # --- Metrics & Charts ---
     if not df_cons.empty:
-        # 1. คำนวณค่าเฉลี่ย (Metrics)
         avg_cons = df_cons['Consumption'].mean()
         max_cons = df_cons['Consumption'].max()
         best_mode = df_cons.loc[df_cons['Consumption'].idxmax()]['Mode']
         
-        # แสดงเป็นการ์ดสวยงาม
         m1, m2, m3 = st.columns(3)
         m1.metric("อัตราสิ้นเปลืองเฉลี่ย", f"{avg_cons:.2f} km/L")
         m2.metric("ประหยัดที่สุด (Best)", f"{max_cons:.2f} km/L")
@@ -258,51 +263,48 @@ with tab4:
         
         st.divider()
 
-        # 2. กราฟเส้น (Line Chart) แสดงแนวโน้ม
-        st.markdown("##### 🟢 แนวโน้มความประหยัด (ยิ่งสูงยิ่งดี)")
-        # เรียงข้อมูลตามวันที่ก่อนพลอตกราฟ
         df_cons_sorted = df_cons.sort_values(by="Date")
-        
         fig_line = px.line(df_cons_sorted, x='Date', y='Consumption', 
                            markers=True, text='Consumption',
                            title='Timeline อัตราสิ้นเปลืองน้ำมัน',
-                           color_discrete_sequence=['#2ECC71']) # สีเขียวมงคล
-        
+                           color_discrete_sequence=['#2ECC71'])
         fig_line.update_traces(textposition="top center", line_width=3)
-        fig_line.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            font_color='#E0E0E0',
-            xaxis_title="วันที่",
-            yaxis_title="อัตราสิ้นเปลือง (km/L)"
-        )
+        fig_line.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#E0E0E0')
         st.plotly_chart(fig_line, use_container_width=True)
-        
-        # 3. กราฟแท่ง (Bar Chart) เปรียบเทียบโหมด
-        st.markdown("##### 📊 เทียบความประหยัดแต่ละโหมด")
-        # หาค่าเฉลี่ยของแต่ละโหมด
-        mode_grp = df_cons.groupby('Mode')['Consumption'].mean().reset_index()
-        
-        fig_bar = px.bar(mode_grp, x='Mode', y='Consumption',
-                         color='Mode', 
-                         title='ค่าเฉลี่ย km/L แยกตามโหมดการขับขี่',
-                         text_auto='.1f',
-                         # ใช้ธีมสีที่เข้ากับ Xforce
-                         color_discrete_map={
-                             "Normal": "#2ECC71", 
-                             "Wet": "#3498DB", 
-                             "Gravel": "#F1C40F", 
-                             "Mud": "#795548", 
-                             "Tarmac": "#E74C3C"
-                         })
-        
-        fig_bar.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            font_color='#E0E0E0',
-            yaxis_title="เฉลี่ย (km/L)"
-        )
-        st.plotly_chart(fig_bar, use_container_width=True)
-        
     else:
-        st.info("💡 ยังไม่มีข้อมูลเพียงพอ กรุณาบันทึกข้อมูลใน Tab แรกก่อนครับ")
+        st.info("ยังไม่มีข้อมูลกราฟ")
+
+    st.divider()
+    
+    # --- Export Section (ส่วนที่เพิ่มใหม่) ---
+    st.subheader("📥 Export Data (ดาวน์โหลดไฟล์)")
+    
+    col_dl1, col_dl2 = st.columns(2)
+    
+    with col_dl1:
+        st.write("📄 **ข้อมูลอัตราสิ้นเปลือง (km/L)**")
+        if not df_cons.empty:
+            csv_cons = df_cons.to_csv(index=False).encode('utf-8-sig')
+            st.download_button(
+                label="⬇️ Download Consumption CSV",
+                data=csv_cons,
+                file_name="xforce_consumption.csv",
+                mime="text/csv",
+                key='dl-cons'
+            )
+        else:
+            st.write("(ไม่มีข้อมูล)")
+            
+    with col_dl2:
+        st.write("🛢️ **ข้อมูลการเติมน้ำมัน**")
+        if not df_refill.empty:
+            csv_refill = df_refill.to_csv(index=False).encode('utf-8-sig')
+            st.download_button(
+                label="⬇️ Download Refill CSV",
+                data=csv_refill,
+                file_name="xforce_refill.csv",
+                mime="text/csv",
+                key='dl-refill'
+            )
+        else:
+            st.write("(ไม่มีข้อมูล)")
