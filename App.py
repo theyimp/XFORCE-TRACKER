@@ -117,3 +117,39 @@ else:
 
 # ฟุตเตอร์
 st.caption(f"App Version 1.0 | พัฒนาเพื่อ Mitsubishi Xforce Ultimate | อัปเดตล่าสุด: {datetime.now().strftime('%d/%m/%Y')}")
+# --- ส่วนแสดงผลกราฟแบบจัดเต็ม (Visual Dashboard) ---
+st.divider()
+st.header("📊 วิเคราะห์พลังงานเชิงลึก")
+
+if not df.empty:
+    tab1, tab2, tab3 = st.tabs(["📈 แนวโน้มรายวัน", "📅 เฉลี่ยรายเดือน", "🎯 วิเคราะห์พฤติกรรม"])
+
+    with tab1:
+        # กราฟเส้นแบบเดิมที่ปรับปรุงให้สวยขึ้น
+        fig1 = px.line(df, x='Date', y='Consumption', 
+                      title='อัตราสิ้นเปลืองรายวัน (km/L)',
+                      markers=True, text="Consumption",
+                      color_discrete_sequence=['#2E7D32']) # สีเขียวมงคล
+        fig1.update_traces(textposition="top center")
+        st.plotly_chart(fig1, use_container_width=True)
+
+    with tab2:
+        # 1. กราฟแท่งรายเดือน
+        df['Month'] = df['Date'].dt.strftime('%Y-%m')
+        monthly_avg = df.groupby('Month')['Consumption'].mean().reset_index()
+        fig2 = px.bar(monthly_avg, x='Month', y='Consumption',
+                     title='ค่าเฉลี่ยการประหยัดน้ำมันรายเดือน',
+                     color='Consumption',
+                     color_continuous_scale='Greens') # ไล่เฉดสีเขียว
+        st.plotly_chart(fig2, use_container_width=True)
+
+    with tab3:
+        # 2. กราฟกระจายดูความสัมพันธ์ (Distance vs Consumption)
+        fig3 = px.scatter(df, x='Odometer', y='Consumption',
+                         size='Consumption', color='Consumption',
+                         title='ความสัมพันธ์ระหว่างระยะทางสะสม และ อัตราสิ้นเปลือง',
+                         labels={'Odometer': 'เลขไมล์ (km)', 'Consumption': 'ประหยัด (km/L)'},
+                         color_continuous_scale='Viridis')
+        st.plotly_chart(fig3, use_container_width=True)
+        st.info("💡 **Tips:** หากจุดอยู่สูงในฝั่งขวา แสดงว่ายิ่งรถวิ่งเยอะ เครื่องยนต์เริ่มเข้าที่และประหยัดขึ้นครับ")
+
