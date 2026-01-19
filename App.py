@@ -4,152 +4,130 @@ import plotly.express as px
 from datetime import datetime
 import os
 from PIL import Image
-import numpy as np
 
-# --- การตั้งค่าเบื้องต้น ---
-st.set_page_config(page_title="Xforce Fuel Tracker", layout="wide", page_icon="♻️")
+# --- Configuration & Styling ---
+st.set_page_config(page_title="Xforce Energy Pro", layout="wide", page_icon="⛽")
 
-# ฟังก์ชันบันทึกข้อมูลลง CSV
-DB_FILE = "fuel_logs.csv"
-def save_data(date, consumption, odometer, note):
-    new_entry = pd.DataFrame([[date, consumption, odometer, note]], 
-                             columns=["Date", "Consumption", "Odometer", "Note"])
-    if os.path.exists(DB_FILE):
-        df = pd.read_csv(DB_FILE)
-        df = pd.concat([df, new_entry], ignore_index=True)
+# สีเขียวมงคลสำหรับคนวันพุธกลางวัน
+STYLING = """
+<style>
+    .stApp { background-color: #f0f4f0; }
+    .metric-card { background-color: #ffffff; padding: 20px; border-radius: 15px; border-left: 5px solid #2E7D32; }
+    h1, h2, h3 { color: #1B5E20; }
+</style>
+"""
+st.markdown(STYLING, unsafe_allow_html=True)
+
+# --- Database Management ---
+DB_CONSUMPTION = "consumption_logs.csv"
+DB_REFILL = "refill_logs.csv"
+
+def save_to_csv(data, filename):
+    df_new = pd.DataFrame([data])
+    if os.path.exists(filename):
+        df_old = pd.read_csv(filename)
+        df_final = pd.concat([df_old, df_new], ignore_index=True)
     else:
-        df = new_entry
-    df.to_csv(DB_FILE, index=False)
+        df_final = df_new
+    df_final.to_csv(filename, index=False)
 
-# ฟังก์ชันโหลดข้อมูล
-def load_data():
-    if os.path.exists(DB_FILE):
-        df = pd.read_csv(DB_FILE)
+def load_data(filename):
+    if os.path.exists(filename):
+        df = pd.read_csv(filename)
         df['Date'] = pd.to_datetime(df['Date'])
         return df.sort_values(by="Date")
-    return pd.DataFrame(columns=["Date", "Consumption", "Odometer", "Note"])
+    return pd.DataFrame()
 
-# --- ส่วนการปรับแต่ง UI (Custom Styling) ---
-st.markdown("""
-    <style>
-    .main { background-color: #f5f7f9; }
-    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- Sidebar: เคล็ดมงคลคนวันพุธกลางวัน ---
+# --- Sidebar: Lucky & Personal Info ---
 with st.sidebar:
-    st.header("🔮 เคล็ดมงคลวันนี้")
-    today_name = datetime.now().strftime('%A')
-    st.write(f"สวัสดีวัน{today_name} ครับ")
+    st.image("https://www.mitsubishi-motors.co.th/content/dam/mitsubishi-motors-th/images/cars/xforce/2024/primary/mitsubishi-xforce-exterior-1.png", caption="Mitsubishi Xforce Ultimate")
+    st.header("🔮 เคล็ดมงคลวันพุธ")
+    st.success("🟢 สีนำโชค: สีเขียว / สีเหลือง")
+    st.info("🕒 ฤกษ์มงคลวันนี้: 08:24 - 10:30 น. (เหมาะกับการออกรถ/บันทึกบัญชี)")
+    st.divider()
+    st.write("วันเกิด: พุธกลางวัน")
+    st.write("รถที่ใช้: Xforce Ultimate")
+
+# --- Main App Interface ---
+st.title("⛽ Xforce Energy & Refill Tracker")
+
+tab1, tab2, tab3 = st.tabs(["📝 บันทึกข้อมูล", "📊 วิเคราะห์ผล", "📜 ประวัติย้อนหลัง"])
+
+# --- TAB 1: Input Data ---
+with tab1:
+    col1, col2 = st.columns(2)
     
-    if today_name == "Wednesday":
-        st.success("✨ วันพุธ: สีเขียวเหนี่ยวทรัพย์")
-        st.write("วันนี้เหมาะกับการเจรจาและการเดินทางที่ราบรื่น")
-    
-    st.info("💡 **Tips สำหรับ Xforce:** ลองใช้ Eco Mode เมื่อขับในเมืองที่มีการจราจรหนาแน่น เพื่อปรับค่าเฉลี่ยให้ดีขึ้นครับ")
+    with col1:
+        st.subheader("📸 บันทึกจากหน้าจอรถ (Dashboard)")
+        with st.form("dashboard_form"):
+            up_file = st.file_uploader("อัปโหลดรูป Dashboard", type=['jpg','png'])
+            d_date = st.date_input("วันที่", datetime.now(), key="d_date")
+            d_cons = st.number_input("อัตราสิ้นเปลืองบนหน้าจอ (km/L)", min_value=0.0, step=0.1)
+            d_odo = st.number_input("เลขไมล์ปัจจุบัน (km)", min_value=0)
+            if st.form_submit_button("บันทึกข้อมูลหน้าจอ"):
+                save_to_csv({"Date": d_date, "Consumption": d_cons, "Odometer": d_odo}, DB_CONSUMPTION)
+                st.toast("บันทึกข้อมูลหน้าจอแล้ว!", icon="✅")
 
-# --- ส่วนหน้าหลัก ---
-st.title("🚗 Mitsubishi Xforce Ultimate Energy Tracker")
-st.write("บันทึกและวิเคราะห์อัตราสิ้นเปลืองน้ำมันของคุณ")
+    with col2:
+        st.subheader("⛽ บันทึกการเติมน้ำมัน (Refill)")
+        with st.form("refill_form"):
+            r_date = st.date_input("วันที่เติมน้ำมัน", datetime.now(), key="r_date")
+            r_liter = st.number_input("จำนวนลิตร (L)", min_value=0.0, step=0.01)
+            r_price = st.number_input("ราคารวม (บาท)", min_value=0.0, step=1.0)
+            r_odo = st.number_input("เลขไมล์ขณะเติม (km)", min_value=0)
+            if st.form_submit_button("บันทึกการเติมน้ำมัน"):
+                save_to_csv({"Date": r_date, "Liters": r_liter, "Price": r_price, "Odometer": r_odo}, DB_REFILL)
+                st.toast("บันทึกข้อมูลเติมน้ำมันแล้ว!", icon="⛽")
 
-# 1. ส่วนการรับข้อมูล (Input Zone)
-col_in1, col_in2 = st.columns([1, 1])
+# --- TAB 2: Analysis & Graphs ---
+with tab2:
+    df_c = load_data(DB_CONSUMPTION)
+    df_r = load_data(DB_REFILL)
 
-with col_in1:
-    st.subheader("📸 อัปโหลดรูปหน้าจอรถ")
-    uploaded_file = st.file_uploader("เลือกรูปภาพ Dashboard...", type=['jpg', 'jpeg', 'png'])
-    
-    # ตัวแปรเริ่มต้น
-    input_cons = 0.0
-    input_odo = 0
+    if not df_c.empty or not df_r.empty:
+        # คำนวณค่าเฉลี่ย
+        avg_dash = df_c['Consumption'].mean() if not df_c.empty else 0
+        total_spent = df_r['Price'].sum() if not df_r.empty else 0
+        
+        m1, m2, m3 = st.columns(3)
+        with m1:
+            st.metric("Avg (หน้าจอรถ)", f"{avg_dash:.2f} km/L")
+        with m2:
+            st.metric("ค่าใช้จ่ายรวม", f"{total_spent:,.2f} บาท")
+        with m3:
+            if len(df_r) > 1:
+                dist = df_r['Odometer'].max() - df_r['Odometer'].min()
+                total_l = df_r['Liters'].iloc[1:].sum()
+                real_avg = dist / total_l if total_l > 0 else 0
+                st.metric("Avg (เติมจริง)", f"{real_avg:.2f} km/L")
+            else:
+                st.metric("Avg (เติมจริง)", "รอข้อมูลเพิ่ม")
 
-    if uploaded_file is not None:
-        image = Image.open(uploaded_file)
-        st.image(image, caption='Dashboard Preview', use_container_width=True)
-        st.info("🔍 ระบบตรวจพบข้อมูลอัตโนมัติ (Simulated OCR)")
-        # ในระบบจริงจะใช้ easyocr ดึงค่า km/L จากรูปภาพ
-        input_cons = 15.2 # ค่าสมมติที่ดึงได้
-        input_odo = 2450  # ค่าสมมติที่ดึงได้
+        st.divider()
+        
+        # กราฟ
+        c1, c2 = st.columns(2)
+        with c1:
+            if not df_c.empty:
+                fig_line = px.line(df_c, x='Date', y='Consumption', title='กราฟอัตราสิ้นเปลืองรายวัน (km/L)',
+                                  markers=True, color_discrete_sequence=['#2E7D32'])
+                st.plotly_chart(fig_line, use_container_width=True)
+        
+        with c2:
+            if not df_r.empty:
+                df_r['Month'] = df_r['Date'].dt.strftime('%b')
+                fig_bar = px.bar(df_r, x='Month', y='Price', title='ค่าใช้จ่ายน้ำมันรายเดือน (บาท)',
+                                color_discrete_sequence=['#FBC02D'])
+                st.plotly_chart(fig_bar, use_container_width=True)
+    else:
+        st.info("ยังไม่มีข้อมูลเพื่อนำมาวิเคราะห์")
 
-with col_in2:
-    st.subheader("📝 ตรวจสอบและบันทึกข้อมูล")
-    final_date = st.date_input("วันที่", datetime.now())
-    final_cons = st.number_input("อัตราสิ้นเปลือง (km/L)", value=input_cons, step=0.1)
-    final_odo = st.number_input("ระยะทางสะสม (Odometer - km)", value=input_odo)
-    final_note = st.text_input("หมายเหตุ (เช่น เส้นทาง, โหมดการขับขี่)")
-
-    if st.button("💾 บันทึกข้อมูลลงสมุดมงคล"):
-        save_data(final_date, final_cons, final_odo, final_note)
-        st.balloons()
-        st.success("บันทึกข้อมูลเรียบร้อยแล้ว!")
-
-st.divider()
-
-# 2. ส่วนแสดงผล (Data Visualization)
-df = load_data()
-
-if not df.empty:
-    # --- ส่วน Metric (ค่าเฉลี่ย) ---
-    avg_total = df['Consumption'].mean()
-    max_eff = df['Consumption'].max()
-    last_odo = df['Odometer'].max()
-
-    col_m1, col_m2, col_m3 = st.columns(3)
-    col_m1.metric("ค่าเฉลี่ยรวมทั้งหมด", f"{avg_total:.2f} km/L")
-    col_m2.metric("ประหยัดที่สุดที่เคยทำ", f"{max_eff:.1f} km/L")
-    col_m3.metric("ระยะทางสะสมล่าสุด", f"{last_odo:,} km")
-
-    # --- ส่วนกราฟ ---
-    st.subheader("📈 แนวโน้มอัตราสิ้นเปลือง")
-    fig = px.line(df, x='Date', y='Consumption', 
-                  title='กราฟแสดงอัตราสิ้นเปลืองพลังงาน (km/L)',
-                  markers=True, 
-                  color_discrete_sequence=['#2E7D32']) # สีเขียวมงคล
-    fig.update_layout(hovermode="x unified")
-    st.plotly_chart(fig, use_container_width=True)
-
-    # --- ส่วนตารางข้อมูล ---
-    with st.expander("📄 ดูประวัติการบันทึกทั้งหมด"):
-        st.dataframe(df.sort_values(by="Date", ascending=False), use_container_width=True)
-else:
-    st.warning("ยังไม่มีข้อมูลในระบบ เริ่มบันทึกข้อมูลแรกของคุณได้เลย!")
-
-# ฟุตเตอร์
-st.caption(f"App Version 1.0 | พัฒนาเพื่อ Mitsubishi Xforce Ultimate | อัปเดตล่าสุด: {datetime.now().strftime('%d/%m/%Y')}")
-# --- ส่วนแสดงผลกราฟแบบจัดเต็ม (Visual Dashboard) ---
-st.divider()
-st.header("📊 วิเคราะห์พลังงานเชิงลึก")
-
-if not df.empty:
-    tab1, tab2, tab3 = st.tabs(["📈 แนวโน้มรายวัน", "📅 เฉลี่ยรายเดือน", "🎯 วิเคราะห์พฤติกรรม"])
-
-    with tab1:
-        # กราฟเส้นแบบเดิมที่ปรับปรุงให้สวยขึ้น
-        fig1 = px.line(df, x='Date', y='Consumption', 
-                      title='อัตราสิ้นเปลืองรายวัน (km/L)',
-                      markers=True, text="Consumption",
-                      color_discrete_sequence=['#2E7D32']) # สีเขียวมงคล
-        fig1.update_traces(textposition="top center")
-        st.plotly_chart(fig1, use_container_width=True)
-
-    with tab2:
-        # 1. กราฟแท่งรายเดือน
-        df['Month'] = df['Date'].dt.strftime('%Y-%m')
-        monthly_avg = df.groupby('Month')['Consumption'].mean().reset_index()
-        fig2 = px.bar(monthly_avg, x='Month', y='Consumption',
-                     title='ค่าเฉลี่ยการประหยัดน้ำมันรายเดือน',
-                     color='Consumption',
-                     color_continuous_scale='Greens') # ไล่เฉดสีเขียว
-        st.plotly_chart(fig2, use_container_width=True)
-
-    with tab3:
-        # 2. กราฟกระจายดูความสัมพันธ์ (Distance vs Consumption)
-        fig3 = px.scatter(df, x='Odometer', y='Consumption',
-                         size='Consumption', color='Consumption',
-                         title='ความสัมพันธ์ระหว่างระยะทางสะสม และ อัตราสิ้นเปลือง',
-                         labels={'Odometer': 'เลขไมล์ (km)', 'Consumption': 'ประหยัด (km/L)'},
-                         color_continuous_scale='Viridis')
-        st.plotly_chart(fig3, use_container_width=True)
-        st.info("💡 **Tips:** หากจุดอยู่สูงในฝั่งขวา แสดงว่ายิ่งรถวิ่งเยอะ เครื่องยนต์เริ่มเข้าที่และประหยัดขึ้นครับ")
-
+# --- TAB 3: History ---
+with tab3:
+    col_h1, col_h2 = st.columns(2)
+    with col_h1:
+        st.write("📋 ประวัติหน้าจอรถ")
+        st.dataframe(df_c, use_container_width=True)
+    with col_h2:
+        st.write("📋 ประวัติการเติมน้ำมัน")
+        st.dataframe(df_r, use_container_width=True)
