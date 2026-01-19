@@ -7,7 +7,7 @@ from datetime import datetime
 DB_CONS = "data_consumption.csv"
 DB_REFILL = "data_refill.csv"
 
-# กำหนดชื่อคอลัมน์ให้ครบถ้วนป้องกัน Error
+# ชื่อคอลัมน์มาตรฐาน
 COLS_CONS = ["Date", "Consumption", "Odometer", "Mode", "Route"]
 COLS_REFILL = ["Date", "Station", "FuelType", "PricePerLiter", "Liters", "TotalPrice", "Odometer"]
 
@@ -16,38 +16,44 @@ st.set_page_config(page_title="Xforce Energy Tracker", layout="wide", page_icon=
 # --- UI Styling (Dark Theme & Green) ---
 st.markdown("""
     <style>
-    /* พื้นหลังและสีหลัก */
+    /* พื้นหลังหลัก */
     .stApp { background-color: #1E1E1E; color: #E0E0E0; }
     
-    /* ปรับแต่ง Title ให้เหมือนรูป */
+    /* ปรับแต่ง Title (ตัวใหญ่สะใจ) */
     h1 { 
         color: #2ECC71 !important; 
         font-family: 'Arial Black', sans-serif;
         text-transform: uppercase;
-        font-size: 3rem;
+        font-size: 3.5rem !important; /* ขยายขนาดฟอนต์ */
+        margin-bottom: 0px;
+        padding-top: 10px;
     }
     
     /* ปรับแต่ง Tabs */
     .stTabs [data-baseweb="tab-list"] { 
-        gap: 10px; 
+        gap: 8px; 
         background-color: transparent;
+        margin-top: 10px;
     }
     .stTabs [data-baseweb="tab"] {
         background-color: #2D2D2D;
-        border-radius: 5px;
-        color: #E0E0E0;
-        font-weight: bold;
+        border-radius: 8px;
+        color: #B0B0B0;
+        font-size: 1.1rem;
+        padding: 10px 20px;
     }
     .stTabs [data-baseweb="tab--active"] {
         background-color: #2ECC71 !important;
         color: black !important;
+        font-weight: bold;
     }
     
-    /* Input Fields */
+    /* Input Fields Style */
     input, select, textarea { 
         background-color: #333 !important; 
         color: white !important; 
         border: 1px solid #444 !important; 
+        border-radius: 5px;
     }
     
     /* Buttons */
@@ -58,96 +64,104 @@ st.markdown("""
         width: 100%; 
         border-radius: 8px;
         border: none;
+        height: 45px;
+        font-size: 1rem;
+        margin-top: 10px;
     }
     .stButton>button:hover { 
         background-color: #27AE60; 
         color: white; 
     }
     
-    /* Expander */
+    /* Expander Style */
     div[data-testid="stExpander"] { 
         background-color: #262626; 
         border: 1px solid #444; 
+        border-radius: 8px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- Functions ---
+# --- Functions (Auto-Fix Columns) ---
 def load_data(filename, columns):
     if os.path.exists(filename):
         try:
             df = pd.read_csv(filename)
-            # *** Auto-Fix: ตรวจสอบและเติมคอลัมน์ที่ขาดหายไปป้องกัน KeyError ***
+            # ตรวจสอบและเติมคอลัมน์ที่ขาดหายไป (แก้ KeyError ถาวร)
             for col in columns:
                 if col not in df.columns:
-                    df[col] = 0.0 if 'Price' in col or 'Liter' in col or 'Odo' in col else ""
+                    if col in ['PricePerLiter', 'Liters', 'TotalPrice', 'Odometer', 'Consumption']:
+                        df[col] = 0.0
+                    else:
+                        df[col] = ""
             return df
-        except Exception as e:
-            st.error(f"Error loading data: {e}")
+        except Exception:
             return pd.DataFrame(columns=columns)
     return pd.DataFrame(columns=columns)
 
-# --- Header Design ตามรูป ---
-col_h1, col_h2 = st.columns([1, 8])
-with col_h1:
-    st.image("https://img.icons8.com/color/96/recycling-symbol.png", width=70) # ใช้ไอคอนรีไซเคิลสีเขียว
-with col_h2:
-    st.markdown("♻️ XFORCE : ENERGY TRACKER")
+# --- Header (เอาแค่ชื่อ ตัวใหญ่ๆ ตามสั่ง) ---
+st.markdown("# ♻️ XFORCE : ENERGY TRACKER")
 
-# --- Tabs (เปลี่ยนชื่อตามรูป) ---
+# --- Tabs ---
 tab1, tab2, tab3 = st.tabs(["📊 อัตราสิ้นเปลืองพลังงาน", "⛽ บันทึกน้ำมัน", "🛠 แก้ไขประวัติ"])
 
 # ------------------------------------------------------------------
-# TAB 1: อัตราสิ้นเปลืองพลังงาน
+# TAB 1: อัตราสิ้นเปลืองพลังงาน (จัด Layout ใหม่)
 # ------------------------------------------------------------------
 with tab1:
     with st.form("add_cons_form"):
+        # แถวที่ 1: โหมดขับขี่ | เลขไมล์
         c1, c2 = st.columns(2)
         d_mode = c1.selectbox("โหมดการขับขี่", ["Normal", "Wet", "Gravel", "Mud", "Tarmac"])
         d_odo = c2.number_input("เลขไมล์ (km)", step=1)
         
-        # ปรับ Layout ให้เหมือนรูป (Route ยาวเต็มบรรทัด)
-        d_route = st.text_input("เส้นทาง/หมายเหตุ")
-        
+        # แถวที่ 2: วันที่ | อัตราสิ้นเปลือง (ย้ายขึ้นมาตามสั่ง)
         c3, c4 = st.columns(2)
         d_date = c3.date_input("วันที่บันทึก", datetime.now())
         d_cons = c4.number_input("อัตราสิ้นเปลืองพลังงาน (km/L)", format="%.1f")
+
+        # แถวที่ 3: เส้นทาง (ยาวเต็ม)
+        d_route = st.text_input("เส้นทาง/หมายเหตุ")
         
-        if st.form_submit_button("บันทึกอัตราสิ้นเปลืองพลังงาน"):
+        # ปุ่มบันทึก
+        if st.form_submit_button("บันทึกข้อมูลหน้าจอ"):
             df = load_data(DB_CONS, COLS_CONS)
             new_data = pd.DataFrame([{"Date": str(d_date), "Consumption": d_cons, "Odometer": d_odo, "Mode": d_mode, "Route": d_route}])
             pd.concat([df, new_data], ignore_index=True).to_csv(DB_CONS, index=False)
-            st.success("บันทึกข้อมูลเรียบร้อย!")
+            st.success("✅ บันทึกข้อมูลเรียบร้อย!")
 
 # ------------------------------------------------------------------
 # TAB 2: บันทึกน้ำมัน
 # ------------------------------------------------------------------
 with tab2:
     with st.form("add_refill_form"):
+        # แถวที่ 1: ปั๊ม | ชนิดน้ำมัน
         c1, c2 = st.columns(2)
         r_station = c1.selectbox("ปั๊มน้ำมัน", ["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"])
         r_type = c2.selectbox("ชนิดน้ำมัน", ["Gasohol 95", "Gasohol 91", "E20", "Gasoline 95"])
         
+        # แถวที่ 2: ราคาต่อลิตร | จำนวนลิตร | เลขไมล์
         c3, c4, c5 = st.columns(3)
         r_ppl = c3.number_input("ราคา/ลิตร", format="%.2f")
         r_lit = c4.number_input("จำนวนลิตร", format="%.2f")
         r_odo = c5.number_input("เลขไมล์", step=1)
         
+        # แถวที่ 3: วันที่
         r_date = st.date_input("วันที่เติม", datetime.now())
         
-        # คำนวณราคารวมอัตโนมัติ
+        # คำนวณราคารวมโชว์
         total_calc = r_ppl * r_lit
-        st.write(f"💰 ราคารวม: **{total_calc:,.2f} บาท**")
+        st.caption(f"💰 ราคารวมโดยประมาณ: {total_calc:,.2f} บาท")
         
         if st.form_submit_button("บันทึกการเติมน้ำมัน"):
             df = load_data(DB_REFILL, COLS_REFILL)
             new_data = pd.DataFrame([{"Date": str(r_date), "Station": r_station, "FuelType": r_type, 
                                       "PricePerLiter": r_ppl, "Liters": r_lit, "TotalPrice": total_calc, "Odometer": r_odo}])
             pd.concat([df, new_data], ignore_index=True).to_csv(DB_REFILL, index=False)
-            st.success("บันทึกข้อมูลน้ำมันเรียบร้อย!")
+            st.success("✅ บันทึกข้อมูลน้ำมันเรียบร้อย!")
 
 # ------------------------------------------------------------------
-# TAB 3: แก้ไขประวัติ (Robust Version)
+# TAB 3: แก้ไขประวัติ
 # ------------------------------------------------------------------
 with tab3:
     # 3.1 แก้ไขน้ำมัน
@@ -157,20 +171,19 @@ with tab3:
     if not df_refill.empty:
         for i in reversed(range(len(df_refill))):
             row = df_refill.iloc[i]
-            # ตรวจสอบค่า TotalPrice ป้องกัน KeyError
+            # แสดงหัวข้อ (ป้องกัน Error ถ้าค่าไม่มี)
             disp_price = row.get('TotalPrice', 0.0)
             if pd.isna(disp_price): disp_price = 0.0
             
             with st.expander(f"📝 {row['Date']} | {row['Station']} | {float(disp_price):.2f} บาท"):
                 col_e1, col_e2 = st.columns(2)
                 
-                # Input Fields (Safe Check)
+                # เตรียมค่า Default (กัน Error)
                 try: val_date = pd.to_datetime(row['Date']).date()
                 except: val_date = datetime.now().date()
-                
-                # ถ้า Station ไม่อยู่ใน List ให้ Default เป็น ETC
                 curr_st = row['Station'] if row['Station'] in ["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"] else "ETC"
                 
+                # Input Fields
                 new_date = col_e1.date_input("วันที่", value=val_date, key=f"rd_{i}")
                 new_st = col_e1.selectbox("ปั๊ม", ["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"], index=["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"].index(curr_st), key=f"rs_{i}")
                 
@@ -189,7 +202,7 @@ with tab3:
                     st.success("แก้ไขเสร็จสิ้น!")
                     st.rerun()
     else:
-        st.info("ไม่มีข้อมูลน้ำมัน")
+        st.info("ยังไม่มีข้อมูลน้ำมัน")
 
     st.divider()
 
@@ -205,7 +218,6 @@ with tab3:
                 
                 try: val_c_date = pd.to_datetime(row['Date']).date()
                 except: val_c_date = datetime.now().date()
-                
                 curr_mode = row['Mode'] if row['Mode'] in ["Normal", "Wet", "Gravel", "Mud", "Tarmac"] else "Normal"
 
                 new_c_date = col_c1.date_input("วันที่", value=val_c_date, key=f"cd_{i}")
@@ -225,4 +237,4 @@ with tab3:
                     st.success("แก้ไขเสร็จสิ้น!")
                     st.rerun()
     else:
-        st.info("ไม่มีข้อมูลอัตราสิ้นเปลือง")
+        st.info("ยังไม่มีข้อมูลอัตราสิ้นเปลือง")
