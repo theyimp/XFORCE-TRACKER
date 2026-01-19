@@ -111,9 +111,9 @@ with tab1:
         
         c3, c4 = st.columns(2)
         d_date = c3.date_input("วันที่บันทึก", datetime.now())
-        d_cons = c4.number_input("อัตราสิ้นเปลือง (km/L)", format="%.1f")
+        d_cons = c4.number_input("อัตราสิ้นเปลืองพลังงาน (km/L)", format="%.1f")
         
-        if st.form_submit_button("บันทึกข้อมูลหน้าจอ"):
+        if st.form_submit_button("บันทึกอัตราสิ้นเปลืองพลังงาน"):
             df = load_data(DB_CONS, COLS_CONS)
             new_data = pd.DataFrame([{"Date": str(d_date), "Consumption": d_cons, "Odometer": d_odo, "Mode": d_mode, "Route": d_route}])
             pd.concat([df, new_data], ignore_index=True).to_csv(DB_CONS, index=False)
