@@ -42,10 +42,10 @@ def append_data(data, filename):
     df_final.to_csv(filename, index=False)
 
 # --- Header ---
-st.title("🚗 XFORCE ULTIMATE - GRAY EDITION")
-st.write(f"📅 พุธกลางวันมงคล | 🟢 สีเขียวเสริมดวง | โหมดปัจจุบัน: **Tarmac Supported**")
+st.title("♻️ XFORCE : ENERGY TRACKER")
 
-tab1, tab2, tab3 = st.tabs(["➕ บันทึก km/L (หน้าจอ)", "⛽ บันทึกการเติมน้ำมัน", "🛠 แก้ไข & สรุปผล"])
+
+tab1, tab2, tab3 = st.tabs(["✳️ อัตราสิ้นเปลืองพลังงาน (km/L)", "⛽ บันทึกการเติมน้ำมัน", "🛠 แก้ไข & สรุปผล"])
 
 # --- หน้า 1: บันทึกหน้าจอรถ ---
 with tab1:
