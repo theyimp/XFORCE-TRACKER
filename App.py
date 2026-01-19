@@ -49,14 +49,14 @@ tab1, tab2, tab3 = st.tabs(["✳️ อัตราสิ้นเปลือ�
 
 # --- หน้า 1: บันทึกหน้าจอรถ ---
 with tab1:
-    st.subheader("📊 บันทึกอัตราสิ้นเปลืองจาก Dashboard")
+    st.subheader("📊 บันทึกอัตราสิ้นเปลืองพลังงาน")
     with st.form("add_form"):
         c1, c2 = st.columns(2)
         with c1:
             d_date = st.date_input("วันที่บันทึก", datetime.now())
             d_mode = st.selectbox("Drive Mode", ["Normal", "Wet", "Gravel", "Mud", "Tarmac"])
         with c2:
-            d_cons = st.number_input("Consumption (km/L)", format="%.1f")
+            d_cons = st.number_input("Consumption Rate (km/L)", format="%.1f")
             d_odo = st.number_input("เลขไมล์หน้าจอ (km)", step=1)
             d_route = st.text_input("เส้นทาง/หมายเหตุ")
         if st.form_submit_button("บันทึกข้อมูลหน้าจอ"):
