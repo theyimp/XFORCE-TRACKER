@@ -25,23 +25,32 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # --- Functions ---
-def load_data(filename):
+def load_data(filename, columns):
     if os.path.exists(filename):
-        return pd.read_csv(filename)
-    return pd.DataFrame()
+        df = pd.read_csv(filename)
+        # ตรวจสอบว่าคอลัมน์ครบไหม ถ้าไม่ครบให้เพิ่มคอลัมน์ว่างป้องกัน Error
+        for col in columns:
+            if col not in df.columns:
+                df[col] = None
+        return df
+    return pd.DataFrame(columns=columns)
 
 def save_all_data(df, filename):
     df.to_csv(filename, index=False)
 
-def append_data(data, filename):
+def append_data(data, filename, columns):
+    df_old = load_data(filename, columns)
     df_new = pd.DataFrame([data])
-    df_old = load_data(filename)
     df_final = pd.concat([df_old, df_new], ignore_index=True)
     df_final.to_csv(filename, index=False)
 
+# กำหนดชื่อคอลัมน์ที่แน่นอน
+COLS_CONS = ["Date", "Consumption", "Odometer", "Mode", "Route"]
+COLS_REFILL = ["Date", "Station", "FuelType", "PricePerLiter", "Liters", "TotalPrice", "Odometer"]
+
 # --- Header ---
-st.title("🚗 XFORCE ULTIMATE - GRAY EDITION V3")
-st.write(f"📅 พุธกลางวันมงคล | 🟢 สีเขียวเสริมดวง | **บันทึกละเอียด & แก้ไขได้ทุกจุด**")
+st.title("🚗 XFORCE ULTIMATE - GRAY EDITION V3.1")
+st.write(f"📅 พุธกลางวันมงคล | 🟢 แก้ไข Error KeyError เรียบร้อยครับ")
 
 tab1, tab2, tab3 = st.tabs(["📊 บันทึกหน้าจอ (km/L)", "⛽ บันทึกการเติมน้ำมัน", "🛠 แก้ไขประวัติ & สรุปผล"])
 
@@ -58,10 +67,10 @@ with tab1:
             d_odo = st.number_input("เลขไมล์หน้าจอ (km)", step=1)
             d_route = st.text_input("เส้นทาง/หมายเหตุ")
         if st.form_submit_button("บันทึกข้อมูลหน้าจอ"):
-            append_data({"Date": str(d_date), "Consumption": d_cons, "Odometer": d_odo, "Mode": d_mode, "Route": d_route}, DB_CONS)
+            append_data({"Date": str(d_date), "Consumption": d_cons, "Odometer": d_odo, "Mode": d_mode, "Route": d_route}, DB_CONS, COLS_CONS)
             st.success("บันทึกสำเร็จ!")
 
-# --- หน้า 2: บันทึกน้ำมัน (เพิ่มราคาต่อลิตร) ---
+# --- หน้า 2: บันทึกน้ำมัน ---
 with tab2:
     st.subheader("⛽ บันทึกการเติมน้ำมัน")
     with st.form("refill_form"):
@@ -71,50 +80,52 @@ with tab2:
             r_station = st.selectbox("ปั๊มน้ำมัน", ["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"])
             r_type = st.selectbox("ชนิดน้ำมัน", ["Gasohol 95", "Gasohol 91", "E20", "Gasoline 95"])
         with col2:
-            r_price_per_liter = st.number_input("ราคาต่อลิตร (บาท)", step=0.01, format="%.2f")
-            r_liter = st.number_input("จำนวนลิตรที่เติม", step=0.01, format="%.2f")
+            r_ppl = st.number_input("ราคาต่อลิตร (บาท)", step=0.01, format="%.2f")
+            r_lit = st.number_input("จำนวนลิตรที่เติม", step=0.01, format="%.2f")
             r_odo = st.number_input("เลขไมล์ขณะเติม (km)", step=1)
         
-        # คำนวณราคารวมให้อัตโนมัติ (โชว์เพื่อความสะดวก)
-        total_calc = r_price_per_liter * r_liter
-        st.write(f"💰 ราคารวมโดยประมาณ: **{total_calc:,.2f} บาท**")
+        total_calc = r_ppl * r_lit
+        st.write(f"💰 ราคารวม: **{total_calc:,.2f} บาท**")
 
         if st.form_submit_button("บันทึกข้อมูลการเติมน้ำมัน"):
             append_data({
-                "Date": str(r_date), 
-                "Station": r_station, 
-                "FuelType": r_type, 
-                "PricePerLiter": r_price_per_liter,
-                "Liters": r_liter, 
-                "TotalPrice": total_calc,
-                "Odometer": r_odo
-            }, DB_REFILL)
-            st.success(f"บันทึกข้อมูล {r_station} สำเร็จ!")
+                "Date": str(r_date), "Station": r_station, "FuelType": r_type, 
+                "PricePerLiter": r_ppl, "Liters": r_lit, "TotalPrice": total_calc, "Odometer": r_odo
+            }, DB_REFILL, COLS_REFILL)
+            st.success(f"บันทึกข้อมูลสำเร็จ!")
 
 # --- หน้า 3: แก้ไขประวัติ & สรุปผล ---
 with tab3:
-    df_c = load_data(DB_CONS)
-    df_r = load_data(DB_REFILL)
+    df_c = load_data(DB_CONS, COLS_CONS)
+    df_r = load_data(DB_REFILL, COLS_REFILL)
     
-    # --- ส่วนที่ 1: แก้ไขประวัติการเติมน้ำมัน (Full Edit) ---
-    st.subheader("⛽ แก้ไขประวัติการเติมน้ำมัน (แก้ไขได้ทุกช่อง)")
+    st.subheader("⛽ แก้ไขประวัติการเติมน้ำมัน")
     if not df_r.empty:
         for i, row in df_r.iterrows():
-            with st.expander(f"แก้ไขรายการ: {row['Date']} | {row['Station']} | {row['TotalPrice']:.2f} บาท"):
+            # ป้องกัน Error กรณีข้อมูลเก่าเป็น None
+            disp_date = row['Date'] if pd.notnull(row['Date']) else "N/A"
+            disp_station = row['Station'] if pd.notnull(row['Station']) else "Unknown"
+            disp_total = row['TotalPrice'] if pd.notnull(row['TotalPrice']) else 0.0
+            
+            with st.expander(f"รายการ: {disp_date} | {disp_station} | {float(disp_total):,.2f} บาท"):
                 with st.form(f"edit_refill_{i}"):
                     e_col1, e_col2 = st.columns(2)
                     with e_col1:
-                        new_date = st.date_input("วันที่", value=datetime.strptime(row['Date'], '%Y-%m-%d'), key=f"date_{i}")
+                        # แปลงวันที่ป้องกัน Error
+                        try: current_date = datetime.strptime(str(row['Date']), '%Y-%m-%d')
+                        except: current_date = datetime.now()
+                        
+                        new_date = st.date_input("วันที่", value=current_date, key=f"date_{i}")
                         new_station = st.selectbox("ปั๊ม", ["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"], 
-                                                 index=["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"].index(row['Station']), key=f"st_{i}")
+                                                 index=["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"].index(row['Station']) if row['Station'] in ["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"] else 0, key=f"st_{i}")
                         new_fuel = st.selectbox("น้ำมัน", ["Gasohol 95", "Gasohol 91", "E20", "Gasoline 95"],
-                                               index=["Gasohol 95", "Gasohol 91", "E20", "Gasoline 95"].index(row['FuelType']), key=f"ft_{i}")
+                                               index=["Gasohol 95", "Gasohol 91", "E20", "Gasoline 95"].index(row['FuelType']) if row['FuelType'] in ["Gasohol 95", "Gasohol 91", "E20", "Gasoline 95"] else 0, key=f"ft_{i}")
                     with e_col2:
-                        new_ppl = st.number_input("ราคา/ลิตร", value=float(row['PricePerLiter']), format="%.2f", key=f"ppl_{i}")
-                        new_lit = st.number_input("จำนวนลิตร", value=float(row['Liters']), format="%.2f", key=f"lit_{i}")
-                        new_odo = st.number_input("เลขไมล์", value=int(row['Odometer']), key=f"odo_{i}")
+                        new_ppl = st.number_input("ราคา/ลิตร", value=float(row['PricePerLiter'] or 0), format="%.2f", key=f"ppl_{i}")
+                        new_lit = st.number_input("จำนวนลิตร", value=float(row['Liters'] or 0), format="%.2f", key=f"lit_{i}")
+                        new_odo = st.number_input("เลขไมล์", value=int(row['Odometer'] or 0), key=f"odo_{i}")
                     
-                    if st.form_submit_button("บันทึกการแก้ไขรายการนี้"):
+                    if st.form_submit_button("บันทึกการแก้ไข"):
                         df_r.at[i, 'Date'] = str(new_date)
                         df_r.at[i, 'Station'] = new_station
                         df_r.at[i, 'FuelType'] = new_fuel
@@ -123,33 +134,6 @@ with tab3:
                         df_r.at[i, 'TotalPrice'] = new_ppl * new_lit
                         df_r.at[i, 'Odometer'] = new_odo
                         save_all_data(df_r, DB_REFILL)
-                        st.success("อัปเดตข้อมูลแล้ว!")
                         st.rerun()
     else:
-        st.info("ยังไม่มีข้อมูลการเติมน้ำมัน")
-
-    st.divider()
-
-    # --- ส่วนที่ 2: แก้ไขประวัติ km/L ---
-    st.subheader("📋 แก้ไขประวัติ km/L (หน้าจอ)")
-    if not df_c.empty:
-        for i, row in df_c.iterrows():
-            with st.expander(f"แก้ไขรายการ: {row['Date']} | {row['Mode']} | {row['Consumption']} km/L"):
-                with st.form(f"edit_cons_{i}"):
-                    ec1, ec2 = st.columns(2)
-                    with ec1:
-                        nc_date = st.date_input("วันที่", value=datetime.strptime(row['Date'], '%Y-%m-%d'), key=f"cdate_{i}")
-                        nc_mode = st.selectbox("Mode", ["Normal", "Wet", "Gravel", "Mud", "Tarmac"], 
-                                             index=["Normal", "Wet", "Gravel", "Mud", "Tarmac"].index(row['Mode']), key=f"cm_{i}")
-                    with ec2:
-                        nc_cons = st.number_input("km/L", value=float(row['Consumption']), format="%.1f", key=f"cc_{i}")
-                        nc_route = st.text_input("เส้นทาง", value=row['Route'], key=f"cr_{i}")
-                    
-                    if st.form_submit_button("บันทึกการแก้ไข km/L"):
-                        df_c.at[i, 'Date'] = str(nc_date)
-                        df_c.at[i, 'Mode'] = nc_mode
-                        df_c.at[i, 'Consumption'] = nc_cons
-                        df_c.at[i, 'Route'] = nc_route
-                        save_all_data(df_c, DB_CONS)
-                        st.success("อัปเดตเรียบร้อย!")
-                        st.rerun()
+        st.info("ยังไม่มีข้อมูล")
