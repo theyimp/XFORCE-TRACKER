@@ -24,7 +24,7 @@ st.markdown("""
         color: #2ECC71 !important; 
         font-family: 'Arial Black', sans-serif;
         text-transform: uppercase;
-        font-size: 3.5rem !important; /* ขยายขนาดฟอนต์ */
+        font-size: 3.5rem !important;
         margin-bottom: 0px;
         padding-top: 10px;
     }
@@ -99,28 +99,28 @@ def load_data(filename, columns):
             return pd.DataFrame(columns=columns)
     return pd.DataFrame(columns=columns)
 
-# --- Header (เอาแค่ชื่อ ตัวใหญ่ๆ ตามสั่ง) ---
+# --- Header ---
 st.markdown("# ♻️ XFORCE : ENERGY TRACKER")
 
 # --- Tabs ---
 tab1, tab2, tab3 = st.tabs(["📊 อัตราสิ้นเปลืองพลังงาน", "⛽ บันทึกน้ำมัน", "🛠 แก้ไขประวัติ"])
 
 # ------------------------------------------------------------------
-# TAB 1: อัตราสิ้นเปลืองพลังงาน (จัด Layout ใหม่)
+# TAB 1: อัตราสิ้นเปลืองพลังงาน (จัด Layout ใหม่ ตามสั่ง)
 # ------------------------------------------------------------------
 with tab1:
     with st.form("add_cons_form"):
-        # แถวที่ 1: โหมดขับขี่ | เลขไมล์
+        # ROW 1 (บนสุด): วันที่ | อัตราสิ้นเปลือง (ย้ายขึ้นมาตามลูกศร)
         c1, c2 = st.columns(2)
-        d_mode = c1.selectbox("โหมดการขับขี่", ["Normal", "Wet", "Gravel", "Mud", "Tarmac"])
-        d_odo = c2.number_input("เลขไมล์ (km)", step=1)
-        
-        # แถวที่ 2: วันที่ | อัตราสิ้นเปลือง (ย้ายขึ้นมาตามสั่ง)
-        c3, c4 = st.columns(2)
-        d_date = c3.date_input("วันที่บันทึก", datetime.now())
-        d_cons = c4.number_input("อัตราสิ้นเปลืองพลังงาน (km/L)", format="%.1f")
+        d_date = c1.date_input("วันที่บันทึก", datetime.now())
+        d_cons = c2.number_input("อัตราสิ้นเปลืองพลังงาน (km/L)", format="%.1f")
 
-        # แถวที่ 3: เส้นทาง (ยาวเต็ม)
+        # ROW 2 (กลาง): โหมดขับขี่ | เลขไมล์
+        c3, c4 = st.columns(2)
+        d_mode = c3.selectbox("โหมดการขับขี่", ["Normal", "Wet", "Gravel", "Mud", "Tarmac"])
+        d_odo = c4.number_input("เลขไมล์ (km)", step=1)
+        
+        # ROW 3 (ล่างสุด): เส้นทาง (ยาวเต็มบรรทัด)
         d_route = st.text_input("เส้นทาง/หมายเหตุ")
         
         # ปุ่มบันทึก
@@ -135,19 +135,20 @@ with tab1:
 # ------------------------------------------------------------------
 with tab2:
     with st.form("add_refill_form"):
-        # แถวที่ 1: ปั๊ม | ชนิดน้ำมัน
+        # ROW 1: วันที่ | ปั๊ม (เอาวันที่ขึ้นก่อนเพื่อความสม่ำเสมอ)
         c1, c2 = st.columns(2)
-        r_station = c1.selectbox("ปั๊มน้ำมัน", ["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"])
-        r_type = c2.selectbox("ชนิดน้ำมัน", ["Gasohol 95", "Gasohol 91", "E20", "Gasoline 95"])
+        r_date = c1.date_input("วันที่เติม", datetime.now())
+        r_station = c2.selectbox("ปั๊มน้ำมัน", ["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"])
         
-        # แถวที่ 2: ราคาต่อลิตร | จำนวนลิตร | เลขไมล์
-        c3, c4, c5 = st.columns(3)
-        r_ppl = c3.number_input("ราคา/ลิตร", format="%.2f")
-        r_lit = c4.number_input("จำนวนลิตร", format="%.2f")
-        r_odo = c5.number_input("เลขไมล์", step=1)
+        # ROW 2: ชนิดน้ำมัน | เลขไมล์
+        c3, c4 = st.columns(2)
+        r_type = c3.selectbox("ชนิดน้ำมัน", ["Gasohol 95", "Gasohol 91", "E20", "Gasoline 95"])
+        r_odo = c4.number_input("เลขไมล์", step=1)
         
-        # แถวที่ 3: วันที่
-        r_date = st.date_input("วันที่เติม", datetime.now())
+        # ROW 3: ราคา/ลิตร | จำนวนลิตร
+        c5, c6 = st.columns(2)
+        r_ppl = c5.number_input("ราคา/ลิตร", format="%.2f")
+        r_lit = c6.number_input("จำนวนลิตร", format="%.2f")
         
         # คำนวณราคารวมโชว์
         total_calc = r_ppl * r_lit
@@ -161,7 +162,7 @@ with tab2:
             st.success("✅ บันทึกข้อมูลน้ำมันเรียบร้อย!")
 
 # ------------------------------------------------------------------
-# TAB 3: แก้ไขประวัติ
+# TAB 3: แก้ไขประวัติ (ปรับ Layout ให้ตรงกับหน้าบันทึก)
 # ------------------------------------------------------------------
 with tab3:
     # 3.1 แก้ไขน้ำมัน
@@ -171,25 +172,25 @@ with tab3:
     if not df_refill.empty:
         for i in reversed(range(len(df_refill))):
             row = df_refill.iloc[i]
-            # แสดงหัวข้อ (ป้องกัน Error ถ้าค่าไม่มี)
             disp_price = row.get('TotalPrice', 0.0)
             if pd.isna(disp_price): disp_price = 0.0
             
             with st.expander(f"📝 {row['Date']} | {row['Station']} | {float(disp_price):.2f} บาท"):
-                col_e1, col_e2 = st.columns(2)
+                c_e1, c_e2 = st.columns(2)
                 
-                # เตรียมค่า Default (กัน Error)
                 try: val_date = pd.to_datetime(row['Date']).date()
                 except: val_date = datetime.now().date()
                 curr_st = row['Station'] if row['Station'] in ["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"] else "ETC"
                 
-                # Input Fields
-                new_date = col_e1.date_input("วันที่", value=val_date, key=f"rd_{i}")
-                new_st = col_e1.selectbox("ปั๊ม", ["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"], index=["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"].index(curr_st), key=f"rs_{i}")
+                # Layout: วันที่ | ปั๊ม
+                new_date = c_e1.date_input("วันที่", value=val_date, key=f"rd_{i}")
+                new_st = c_e2.selectbox("ปั๊ม", ["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"], index=["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"].index(curr_st), key=f"rs_{i}")
                 
-                new_ppl = col_e2.number_input("ราคา/ลิตร", value=float(row.get('PricePerLiter', 0)), key=f"rp_{i}")
-                new_lit = col_e2.number_input("จำนวนลิตร", value=float(row.get('Liters', 0)), key=f"rl_{i}")
-                new_odo = col_e2.number_input("เลขไมล์", value=int(row.get('Odometer', 0)), key=f"ro_{i}")
+                # Layout: ราคา | ลิตร | ไมล์
+                c_e3, c_e4, c_e5 = st.columns(3)
+                new_ppl = c_e3.number_input("ราคา/ลิตร", value=float(row.get('PricePerLiter', 0)), key=f"rp_{i}")
+                new_lit = c_e4.number_input("จำนวนลิตร", value=float(row.get('Liters', 0)), key=f"rl_{i}")
+                new_odo = c_e5.number_input("เลขไมล์", value=int(row.get('Odometer', 0)), key=f"ro_{i}")
 
                 if st.button(f"บันทึกแก้ไข (รายการที่ {i+1})", key=f"btn_r_{i}"):
                     df_refill.at[i, 'Date'] = str(new_date)
@@ -206,7 +207,7 @@ with tab3:
 
     st.divider()
 
-    # 3.2 แก้ไข km/L
+    # 3.2 แก้ไข km/L (ปรับ Layout ให้ตรงกับหน้าแรก)
     st.subheader("📊 ประวัติอัตราสิ้นเปลือง (แก้ไข)")
     df_cons = load_data(DB_CONS, COLS_CONS)
     
@@ -214,17 +215,22 @@ with tab3:
         for i in reversed(range(len(df_cons))):
             row = df_cons.iloc[i]
             with st.expander(f"📝 {row['Date']} | {row['Mode']} | {row.get('Consumption', 0)} km/L"):
-                col_c1, col_c2 = st.columns(2)
                 
                 try: val_c_date = pd.to_datetime(row['Date']).date()
                 except: val_c_date = datetime.now().date()
                 curr_mode = row['Mode'] if row['Mode'] in ["Normal", "Wet", "Gravel", "Mud", "Tarmac"] else "Normal"
 
-                new_c_date = col_c1.date_input("วันที่", value=val_c_date, key=f"cd_{i}")
-                new_c_mode = col_c1.selectbox("Mode", ["Normal", "Wet", "Gravel", "Mud", "Tarmac"], index=["Normal", "Wet", "Gravel", "Mud", "Tarmac"].index(curr_mode), key=f"cm_{i}")
+                # Row 1: วันที่ | อัตราสิ้นเปลือง (ตามหน้าบันทึก)
+                ce_1, ce_2 = st.columns(2)
+                new_c_date = ce_1.date_input("วันที่", value=val_c_date, key=f"cd_{i}")
+                new_c_cons = ce_2.number_input("Consumption", value=float(row.get('Consumption', 0)), key=f"cc_{i}")
+
+                # Row 2: โหมด | เลขไมล์
+                ce_3, ce_4 = st.columns(2)
+                new_c_mode = ce_3.selectbox("Mode", ["Normal", "Wet", "Gravel", "Mud", "Tarmac"], index=["Normal", "Wet", "Gravel", "Mud", "Tarmac"].index(curr_mode), key=f"cm_{i}")
+                new_c_odo = ce_4.number_input("เลขไมล์", value=int(row.get('Odometer', 0)), key=f"co_{i}")
                 
-                new_c_cons = col_c2.number_input("Consumption", value=float(row.get('Consumption', 0)), key=f"cc_{i}")
-                new_c_odo = col_c2.number_input("เลขไมล์", value=int(row.get('Odometer', 0)), key=f"co_{i}")
+                # Row 3: เส้นทาง
                 new_c_route = st.text_input("เส้นทาง", value=str(row.get('Route', '')), key=f"cr_{i}")
 
                 if st.button(f"บันทึกแก้ไข (รายการที่ {i+1})", key=f"btn_c_{i}"):
