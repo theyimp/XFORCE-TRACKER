@@ -22,7 +22,7 @@ st.markdown("""
     .stTabs [data-baseweb="tab--active"] { color: #2ECC71 !important; border-bottom-color: #2ECC71 !important; }
     div[data-testid="stExpander"] { background-color: #2D2D2D; border: 1px solid #444; }
     input, select, textarea { background-color: #333 !important; color: white !important; }
-    .stButton>button { background-color: #2ECC71; color: black; font-weight: bold; border-radius: 5px; }
+    .stButton>button { background-color: #2ECC71; color: black; font-weight: bold; border-radius: 5px; width: 100%; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -42,69 +42,87 @@ def append_data(data, filename):
     df_final.to_csv(filename, index=False)
 
 # --- Header ---
-st.title("♻️ XFORCE : ENERGY TRACKER")
+st.title("🚗 XFORCE ULTIMATE - GRAY EDITION")
+st.write(f"📅 พุธกลางวันมงคล | 🟢 สีเขียวเสริมดวง | โหมดปัจจุบัน: **Tarmac Supported**")
 
+tab1, tab2, tab3 = st.tabs(["➕ บันทึก km/L (หน้าจอ)", "⛽ บันทึกการเติมน้ำมัน", "🛠 แก้ไข & สรุปผล"])
 
-tab1, tab2, tab3 = st.tabs(["✳️ อัตราสิ้นเปลืองพลังงาน", "⛽ เติมน้ำมัน", "📊 แก้ไข & สรุปผล"])
-
-# --- หน้า 1: เพิ่มข้อมูล ---
+# --- หน้า 1: บันทึกหน้าจอรถ ---
 with tab1:
+    st.subheader("📊 บันทึกอัตราสิ้นเปลืองจาก Dashboard")
     with st.form("add_form"):
         c1, c2 = st.columns(2)
         with c1:
-            d_date = st.date_input("วันที่", datetime.now())
+            d_date = st.date_input("วันที่บันทึก", datetime.now())
             d_mode = st.selectbox("Drive Mode", ["Normal", "Wet", "Gravel", "Mud", "Tarmac"])
         with c2:
             d_cons = st.number_input("Consumption (km/L)", format="%.1f")
-            d_odo = st.number_input("Odometer (km)", step=1)
+            d_odo = st.number_input("เลขไมล์หน้าจอ (km)", step=1)
             d_route = st.text_input("เส้นทาง/หมายเหตุ")
-        if st.form_submit_button("บันทึกข้อมูล"):
+        if st.form_submit_button("บันทึกข้อมูลหน้าจอ"):
             append_data({"Date": str(d_date), "Consumption": d_cons, "Odometer": d_odo, "Mode": d_mode, "Route": d_route}, DB_CONS)
             st.success("บันทึกสำเร็จ!")
 
-# --- หน้า 2: เติมน้ำมัน ---
+# --- หน้า 2: บันทึกน้ำมัน (อัปเดต ปั๊ม และ ชนิดน้ำมัน) ---
 with tab2:
+    st.subheader("⛽ รายละเอียดการเข้าสถานีบริการน้ำมัน")
     with st.form("refill_form"):
         c1, c2 = st.columns(2)
         with c1:
             r_date = st.date_input("วันที่เติม", datetime.now())
-            r_price = st.number_input("ยอดเงิน (บาท)")
+            r_station = st.selectbox("ปั๊มน้ำมัน", ["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"])
+            r_type = st.selectbox("ชนิดน้ำมัน", ["Gasohol 95", "Gasohol 91", "E20", "Gasoline 95"])
         with c2:
+            r_price = st.number_input("ยอดเงินรวม (บาท)", step=1.0)
             r_liter = st.number_input("จำนวนลิตร", step=0.01)
-            r_odo = st.number_input("เลขไมล์ขณะเติม", step=1)
-        if st.form_submit_button("บันทึกการเติมน้ำมัน"):
-            append_data({"Date": str(r_date), "Price": r_price, "Liters": r_liter, "Odometer": r_odo}, DB_REFILL)
-            st.success("บันทึกสำเร็จ!")
+            r_odo = st.number_input("เลขไมล์ขณะเติม (km)", step=1)
+        
+        if st.form_submit_button("บันทึกข้อมูลการเติมน้ำมัน"):
+            append_data({
+                "Date": str(r_date), 
+                "Station": r_station, 
+                "FuelType": r_type, 
+                "Price": r_price, 
+                "Liters": r_liter, 
+                "Odometer": r_odo
+            }, DB_REFILL)
+            st.success(f"บันทึกข้อมูล {r_station} เรียบร้อย!")
 
 # --- หน้า 3: แก้ไขและสรุปผล ---
 with tab3:
     df_c = load_data(DB_CONS)
+    df_r = load_data(DB_REFILL)
+    
+    st.subheader("📉 กราฟแนวโน้มสมรรถนะ")
     if not df_c.empty:
-        st.subheader("📋 ประวัติการขับขี่ (สามารถแก้ไขได้)")
-        
-        # กราฟ
-        fig = px.line(df_c, x='Date', y='Consumption', title="Performance Trend", markers=True, template="plotly_dark")
+        fig = px.line(df_c, x='Date', y='Consumption', markers=True, template="plotly_dark")
         fig.update_traces(line_color='#2ECC71')
         st.plotly_chart(fig, use_container_width=True)
 
-        # ส่วนแก้ไขข้อมูล
+    # ส่วนแก้ไขข้อมูลหน้าจอ
+    if not df_c.empty:
+        st.subheader("📝 แก้ไขประวัติ km/L")
         for i, row in df_c.iterrows():
-            with st.expander(f"✏️ แก้ไขรายการวันที่: {row['Date']} | {row['Route']}"):
-                with st.form(f"edit_form_{i}"):
-                    ec1, ec2, ec3 = st.columns(3)
-                    new_cons = ec1.number_input("Consumption", value=float(row['Consumption']), key=f"c_{i}")
-                    new_odo = ec2.number_input("Odometer", value=int(row['Odometer']), key=f"o_{i}")
-                    new_route = ec3.text_input("Route", value=row['Route'], key=f"r_{i}")
-                    new_mode = st.selectbox("Mode", ["Normal", "Wet", "Gravel", "Mud", "Tarmac"], 
-                                            index=["Normal", "Wet", "Gravel", "Mud", "Tarmac"].index(row['Mode']), key=f"m_{i}")
-                    
-                    if st.form_submit_button("อัปเดตข้อมูลรายการนี้"):
+            with st.expander(f"แก้ไข: {row['Date']} | {row['Mode']} | {row['Route']}"):
+                with st.form(f"edit_cons_{i}"):
+                    new_cons = st.number_input("Consumption", value=float(row['Consumption']), key=f"ec_{i}")
+                    new_route = st.text_input("Route", value=row['Route'], key=f"er_{i}")
+                    if st.form_submit_button("อัปเดต"):
                         df_c.at[i, 'Consumption'] = new_cons
-                        df_c.at[i, 'Odometer'] = new_odo
                         df_c.at[i, 'Route'] = new_route
-                        df_c.at[i, 'Mode'] = new_mode
                         save_all_data(df_c, DB_CONS)
-                        st.success("อัปเดตเรียบร้อย! กรุณารีเฟรชหน้าจอ")
                         st.rerun()
-    else:
-        st.info("ยังไม่มีข้อมูลให้แสดงผล")
+
+    # ส่วนแก้ไขข้อมูลเติมน้ำมัน
+    if not df_r.empty:
+        st.subheader("⛽ แก้ไขประวัติการเติมน้ำมัน")
+        for i, row in df_r.iterrows():
+            with st.expander(f"แก้ไข: {row['Date']} | {row['Station']} | {row['Price']} บาท"):
+                with st.form(f"edit_refill_{i}"):
+                    new_station = st.selectbox("ปั๊ม", ["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"], index=["PTT", "PTG", "Caltex", "Shell", "Bangchak", "ETC"].index(row['Station']), key=f"es_{i}")
+                    new_price = st.number_input("ราคา", value=float(row['Price']), key=f"ep_{i}")
+                    if st.form_submit_button("อัปเดต"):
+                        df_r.at[i, 'Station'] = new_station
+                        df_r.at[i, 'Price'] = new_price
+                        save_all_data(df_r, DB_REFILL)
+                        st.rerun()
