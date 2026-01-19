@@ -7,7 +7,7 @@ from PIL import Image
 import numpy as np
 
 # --- การตั้งค่าเบื้องต้น ---
-st.set_page_config(page_title="Xforce Fuel Tracker", layout="wide", page_icon="🚗")
+st.set_page_config(page_title="Xforce Fuel Tracker", layout="wide", page_icon="♻️")
 
 # ฟังก์ชันบันทึกข้อมูลลง CSV
 DB_FILE = "fuel_logs.csv"
